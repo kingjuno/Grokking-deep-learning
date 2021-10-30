@@ -89,6 +89,15 @@ class Tensor (object):
             if("expand" in self.creation_op):
                 dim = int(self.creation_op.split("_")[1])
                 self.creators[0].backward(self.grad.sum(dim))
+
+            if(self.creation_op == "sigmoid"):
+                ones = Tensor(np.ones_like(self.grad.data))
+                self.creators[0].backward(self.grad * (self * (ones - self)))
+                
+            if(self.creation_op == "tanh"):
+                ones = Tensor(np.ones_like(self.grad.data))
+                self.creators[0].backward(self.grad * (ones - (self * self)))
+
     def __add__(self,other):
         if self.autograd and other.autograd:
             return Tensor(
@@ -174,6 +183,22 @@ class Tensor (object):
                 creation_op="mm"
             )
         return Tensor(self.data.dot(other.data))
+
+    def sigmoid(self):
+        if self.autograd:
+            return Tensor(1 / (1 + np.exp(-self.data)),
+        autograd=True,
+        creators=[self],
+        creation_op="sigmoid")
+        return Tensor(1 / (1 + np.exp(-self.data)))
+
+    def tanh(self):
+        if self.autograd:
+            return Tensor(np.tanh(self.data),
+        autograd=True,
+        creators=[self],
+        creation_op="tanh")
+        return Tensor(np.tanh(self.data))
 
     def __repr__(self):
         return str(self.data.__repr__())
