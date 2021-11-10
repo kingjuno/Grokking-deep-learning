@@ -98,6 +98,14 @@ class Tensor (object):
                 ones = Tensor(np.ones_like(self.grad.data))
                 self.creators[0].backward(self.grad * (ones - (self * self)))
 
+            if(self.creation_op == "index_select"):
+                new_grad = np.zeros_like(self.creators[0].data)
+                indices_ = self.index_select_indices.data.flatten()
+                grad_ = grad.data.reshape(len(indices_), -1)
+                for i in range(len(indices_)):
+                    new_grad[indices_[i]] += grad_[i]
+                    self.creators[0].backward(Tensor(new_grad))
+
     def __add__(self,other):
         if self.autograd and other.autograd:
             return Tensor(
@@ -199,6 +207,17 @@ class Tensor (object):
         creators=[self],
         creation_op="tanh")
         return Tensor(np.tanh(self.data))
+    
+    def index_select(self, indices):
+        if(self.autograd):
+            new = Tensor(self.data[indices.data],
+                autograd=True,
+                creators=[self],
+                creation_op="index_select"
+            )
+            new.index_select_indices = indices
+            return new
+        return Tensor(self.data[indices.data])
 
     def __repr__(self):
         return str(self.data.__repr__())
